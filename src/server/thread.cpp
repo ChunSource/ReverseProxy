@@ -20,6 +20,17 @@ void Thread::run()
     qDebug()<<"new Proxy "<<this->currentThreadId();
     forward = new Forward(this->socketID);
     forward->init();
-    connect(forward,&Forward::finsh,this,&Thread::exit,Qt::DirectConnection);
+    connect(forward,&Forward::finsh,this,[=](){
+        qDebug()<<"[*]---Thread deleteLater";
+        emit SIGNAL_Finsh(this->socketID);  //告诉父对象我们退出了，让他在客户端列表中除去我们
+        this->quit();
+        this->wait();
+        this->deleteLater();
+    },Qt::DirectConnection);
     this->exec();
+}
+
+void Thread::SLOT_ClientWillConnectPort(QString ip, int port)
+{
+    emit SIGNAL_ClientWillConnectPort(this->socketID,ip,port);  //返回上层我们的监听端口，给客户选择
 }

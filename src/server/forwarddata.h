@@ -11,7 +11,6 @@ public:
     explicit ForwardData(QTcpSocket* p,QTcpSocket* c, QObject *parent = nullptr);
     ~ForwardData();
     void forward();
-signals:
     
 private slots:
     void writeToProxy();

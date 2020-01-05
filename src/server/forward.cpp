@@ -39,14 +39,19 @@ void Forward::init()
     //监听新进来的提供者
     listenOffer = new QTcpServer();
     listenOffer->listen(QHostAddress::AnyIPv4);
-    listenOfferPort = listenOffer->serverPort();
+    listenOfferPort = listenOffer->serverPort();  //记录提供者将要连接的端口号
     connect(listenOffer,&QTcpServer::newConnection,this,&Forward::newOffer);
     qDebug()<<"[*]---offer port"<<listenOfferPort;
+    
     //开启服务，并记录系统随机监听的端口
     this->forwardServer = new QTcpServer();
     this->forwardServer->listen(QHostAddress::AnyIPv4);
-    this->serverPort = this->forwardServer->serverPort(); //记录端口
+    this->serverPort = this->forwardServer->serverPort(); //记录客户将要连接的端口号
     qDebug()<<"[*]---client port"<<serverPort;
+    
+    this->proxyServer->write(Command_OFFERPORT+QByteArray::number(listenOfferPort));  //告诉提供者，我们监听的提供者端口
+    emit clientWillConnectPort(this->proxyServer->peerAddress().toString(),serverPort);  //返回父对象我们供客户连接的端口，让客户端显示出来
+    
     connect(this->forwardServer,&QTcpServer::newConnection,this,&Forward::newConnect);
     connect(this->proxyServer,&QTcpSocket::disconnected,this,&Forward::deleteLater);
 }
@@ -90,9 +95,3 @@ void Forward::newConnect()  //有新的客户进来了
         clientList.push_back(socket);
     }
 }
-/*
-void Forward::leave()  //释放内存的
-{
-    
-}
-*/
