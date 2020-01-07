@@ -11,7 +11,7 @@ Thread::~Thread()
     qDebug()<<"[*]---exit Thread";
     if(forward!=nullptr)
     {
-        forward->deleteLater();
+    //    forward->deleteLater();
     }
 }
 
@@ -19,7 +19,6 @@ void Thread::run()
 {
     qDebug()<<"new Proxy "<<this->currentThreadId();
     forward = new Forward(this->socketID);
-    forward->init();
     connect(forward,&Forward::finsh,this,[=](){
         qDebug()<<"[*]---Thread deleteLater";
         emit SIGNAL_Finsh(this->socketID);  //告诉父对象我们退出了，让他在客户端列表中除去我们
@@ -27,6 +26,8 @@ void Thread::run()
         this->wait();
         this->deleteLater();
     },Qt::DirectConnection);
+    connect(forward,&Forward::clientWillConnectPort,this,&Thread::SLOT_ClientWillConnectPort,Qt::DirectConnection);
+    forward->init();
     this->exec();
 }
 

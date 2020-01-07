@@ -6,6 +6,8 @@
 #include <QTcpSocket>
 #include <QHostAddress>
 #include <QStringList>
+#include <QMessageBox>
+#include <QMenu>
 #include "Command.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -21,18 +23,24 @@ public:
     
 private:
     Ui::MainWindow *ui;
-    QTcpSocket     *socket = nullptr;
+    QMenu* menu;
     
+    QTcpSocket     *socket = nullptr;
+    bool isConnected = false;
     bool isLocalMode = false;
     QString serverIP ="127.0.0.1";
     int     serverPort = 80;
     
     
 private slots:
+    void InitGui();
     void ButtonModeChange();//客户端修改信息
     void ButtonApplyInfo(); //客户端修改后重新连接服务器
     void SocketProcess();   //处理服务器发回来的数据
     void AddonlineInfo(QString id,QString ip,QString port);  //在界面添加新的提供者信息
     void RemoveofflineInfo(int id);                          //移除界面中已有的提供者
+    void UseChoeseOffer();
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 };
 #endif // MAINWINDOW_H

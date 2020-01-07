@@ -8,11 +8,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     socket = new QTcpSocket(this);
     
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    
+    InitGui();
     connect(ui->ButtonApplyChange,&QPushButton::clicked,this,&MainWindow::ButtonApplyInfo);
     connect(socket,&QTcpSocket::readyRead,this,&MainWindow::SocketProcess);
-    
+    connect(socket,&QTcpSocket::disconnected,this,[=](){
+       ui->ButtonApplyChange->setEnabled(1); 
+       QMessageBox::information(this,tr("警告"),tr("服务器断开连接"));
+    });
     //服务器信息修改
     connect(ui->LineServerPort,&QLineEdit::textChanged,this,[=]{
         ui->ButtonApplyChange->setEnabled(true);
@@ -28,7 +30,23 @@ MainWindow::~MainWindow()
 {
     socket->disconnectFromHost();
     socket->deleteLater();
+    menu->clear();
+    menu->close();
+    delete menu;
     delete ui;
+}
+
+void MainWindow::InitGui()
+{
+    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);  //设置不可编辑
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);  //设置自适应列宽
+    ui->tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);   //设置一次只能选中一行
+    ui->tableWidget->installEventFilter(this);
+    //右键菜单
+    menu = new QMenu(this);
+    QAction* useAction = menu->addAction("使用");
+    menu->addAction(useAction);
+    connect(useAction,&QAction::triggered,this,&MainWindow::UseChoeseOffer);
 }
 
 void MainWindow::ButtonModeChange()
@@ -67,8 +85,16 @@ void MainWindow::ButtonApplyInfo()  //服务器信息更改，重新连接
         qDebug()<<"[*]---远程模式";
         socket->connectToHost(serverIP,serverPort);
     }
+    if(socket->waitForConnected())
+    {
+        socket->write(Command_LOGIN); //发送登陆协议信息
+    }
+    else
+    {
+        QMessageBox::information(this,tr("警告"),tr("无法连接到服务器"));
+        ui->ButtonApplyChange->setEnabled(true);
+    }
     
-    socket->write(Command_LOGIN); //发送登陆协议信息
 }
 
 void MainWindow::SocketProcess()
@@ -118,5 +144,21 @@ void MainWindow::RemoveofflineInfo(int id)
             ui->tableWidget->removeRow(i);
         }
     }
+}
+
+void MainWindow::UseChoeseOffer()
+{
+    
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched==(QObject*)ui->tableWidget) {
+            if (event->type() == QEvent::ContextMenu) {
+                menu->exec(QCursor::pos());
+            }
+        }
+     
+        return QObject::eventFilter(watched, event);
 }
 

@@ -1,28 +1,17 @@
 #include "server.h"
+#include <QDebug>
 
-Server::Server(const STARTSTYLE& style, int localPort)
+Server::Server()
 {
     guiServer = new QTcpServer();
-    QHostAddress address;
-    switch (style) {
-    case LOCAL:
-    {
-        address = QHostAddress::LocalHost;
-        break;
-    }
-    case IPV4:
-    {
-        address = QHostAddress::AnyIPv4;
-        break;
-    }
-    case IPV6:
-    {
-        address = QHostAddress::AnyIPv6;
-        break;
-    }
-    }
-    guiServer->listen(address,localPort);
+    guiServer->listen(QHostAddress::AnyIPv4,80);
     connect(guiServer,&QTcpServer::newConnection,this,&Server::guiConnectToServer);
+}
+
+Server::~Server()
+{
+    guiServer->close();
+    guiServer->deleteLater();
 }
 
 bool Server::startServer(int port, const QHostAddress &address)
@@ -52,19 +41,20 @@ void Server::incomingConnection(qintptr handle)
 
 void Server::getBackToClientWillConnectPort(int id, QString ip, int port)
 {
-    QString result = Command_ONLINE;
-    result += QString::number(id);
-    result += "#";
-    result += ip;
-    result +="#";
-    result +=QString::number(port);
+    infoStruct info;
+    info.id = id;
+    info.ip = ip;
+    info.port = port;
+    infoStructElement.insert(id,info);
+    
+    QString result = formatOnlineInfo(id,ip,port);
     sendMessageToAllClient(result.toUtf8());
 }
 
 void Server::getBackToClientOffLine(int id)
 {
+    infoStructElement.remove(id);
     QString result = Command_OFFLINE;
-    result += "#";
     result += QString::number(id);
     sendMessageToAllClient(result.toUtf8());
 }
@@ -73,13 +63,58 @@ void Server::guiConnectToServer()
 {
     QTcpSocket *socket = this->guiServer->nextPendingConnection();
     guiElement.push_back(socket);
+    sendCurrentOfferToNewClient(socket);
+    connect(socket,&QTcpSocket::readyRead,this,[=](){
+        if(socket->readAll().indexOf(Command_LOGIN) ==-1)
+        {
+            socket->disconnectFromHost();
+            socket->deleteLater();
+            guiElement.removeOne(socket);
+        }
+    });
+    
+    connect(socket,&QTcpSocket::disconnected,this,[=](){
+            socket->disconnectFromHost();
+            socket->deleteLater();
+            guiElement.removeOne(socket);
+    });
+    
 }
 
 void Server::sendMessageToAllClient(QByteArray byte)
 {
+    qDebug()<<"[*]---send: "<<byte;
     for (guiElementIterator=guiElement.begin();guiElementIterator!=guiElement.end();guiElementIterator++)  
     {  
-        static_cast<QTcpSocket*>(*guiElementIterator)->write(byte);
+        QTcpSocket* p = static_cast<QTcpSocket*>(*guiElementIterator);
+        if(p!=nullptr)
+        {
+            p->write(byte);
+        }
     } 
 }
+
+void Server::sendCurrentOfferToNewClient(QTcpSocket *socket)
+{
+
+    QMapIterator<int,infoStruct> i(this->infoStructElement);
+    while (i.hasNext()) {
+        i.next();
+        QString result = formatOnlineInfo(i.value().id,i.value().ip,i.value().port);
+        socket->write(result.toUtf8());
+    }
+    
+}
+
+QString Server::formatOnlineInfo(int id, QString ip, int port)
+{
+    QString result = Command_ONLINE;
+    result += QString::number(id);
+    result += "#";
+    result += ip;
+    result +="#";
+    result +=QString::number(port);
+    return result;
+}
+
 

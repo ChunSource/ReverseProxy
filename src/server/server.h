@@ -4,13 +4,14 @@
 #include <QObject>
 #include <QTcpServer>
 #include <QVector>
+#include <QMap>
 #include "thread.h"
 class Server : public QTcpServer
 {
     Q_OBJECT
 public:
-    enum STARTSTYLE{LOCAL,IPV4,IPV6};
-    Server(const STARTSTYLE& style,int localPort=80);
+    Server();
+    ~Server();
     bool startServer(int port , const QHostAddress& address = QHostAddress::AnyIPv4);
     void stopServer();
 
@@ -22,10 +23,20 @@ private slots:
     void getBackToClientOffLine(int id);
     void guiConnectToServer();
     void sendMessageToAllClient(QByteArray byte);
+    void sendCurrentOfferToNewClient(QTcpSocket* socket);
+    QString formatOnlineInfo(int id,QString ip,int port);  //格式化登陆协议的字符串
 private:
+    struct infoStruct
+    {
+        int id;
+        QString ip;
+        int port;
+    };
     QTcpServer* guiServer = nullptr;
+    QMap<int,infoStruct> infoStructElement;
     QVector<QTcpSocket*> guiElement;
     QVector<QTcpSocket*>::Iterator guiElementIterator;
+
 };
 
 #endif // SERVER_H
