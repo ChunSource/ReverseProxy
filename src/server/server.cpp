@@ -39,7 +39,7 @@ void Server::incomingConnection(qintptr handle)
     t->start();
 }
 
-void Server::getBackToClientWillConnectPort(int id, QString ip, int port)
+void Server::getBackToClientWillConnectPort(int id, QString ip, int port) //发送给所有的客户端，我们已有的提供者信息
 {
     infoStruct info;
     info.id = id;
@@ -51,7 +51,7 @@ void Server::getBackToClientWillConnectPort(int id, QString ip, int port)
     sendMessageToAllClient(result.toUtf8());
 }
 
-void Server::getBackToClientOffLine(int id)
+void Server::getBackToClientOffLine(int id)  //告诉所有客户端，断开连接的提供者信息
 {
     infoStructElement.remove(id);
     QString result = Command_OFFLINE;
@@ -59,13 +59,14 @@ void Server::getBackToClientOffLine(int id)
     sendMessageToAllClient(result.toUtf8());
 }
 
-void Server::guiConnectToServer()
+void Server::guiConnectToServer()   //客户端连接到服务器之后
 {
     QTcpSocket *socket = this->guiServer->nextPendingConnection();
-    guiElement.push_back(socket);
-    sendCurrentOfferToNewClient(socket);
+    guiElement.push_back(socket);   //保存客户端的socket*
+    sendCurrentOfferToNewClient(socket);  //发送所有当前的提供者信息给客户端
+    
     connect(socket,&QTcpSocket::readyRead,this,[=](){
-        if(socket->readAll().indexOf(Command_LOGIN) ==-1)
+        if(socket->readAll().indexOf(Command_LOGIN) ==-1) //验证协议
         {
             socket->disconnectFromHost();
             socket->deleteLater();
@@ -73,7 +74,7 @@ void Server::guiConnectToServer()
         }
     });
     
-    connect(socket,&QTcpSocket::disconnected,this,[=](){
+    connect(socket,&QTcpSocket::disconnected,this,[=](){ //处理断开
             socket->disconnectFromHost();
             socket->deleteLater();
             guiElement.removeOne(socket);
@@ -81,7 +82,7 @@ void Server::guiConnectToServer()
     
 }
 
-void Server::sendMessageToAllClient(QByteArray byte)
+void Server::sendMessageToAllClient(QByteArray byte) //给所有客户端发送信息
 {
     qDebug()<<"[*]---send: "<<byte;
     for (guiElementIterator=guiElement.begin();guiElementIterator!=guiElement.end();guiElementIterator++)  
@@ -94,7 +95,7 @@ void Server::sendMessageToAllClient(QByteArray byte)
     } 
 }
 
-void Server::sendCurrentOfferToNewClient(QTcpSocket *socket)
+void Server::sendCurrentOfferToNewClient(QTcpSocket *socket)  //发送所有当前的提供者信息给客户端
 {
 
     QMapIterator<int,infoStruct> i(this->infoStructElement);
@@ -106,7 +107,7 @@ void Server::sendCurrentOfferToNewClient(QTcpSocket *socket)
     
 }
 
-QString Server::formatOnlineInfo(int id, QString ip, int port)
+QString Server::formatOnlineInfo(int id, QString ip, int port)  //格式化我们的信息
 {
     QString result = Command_ONLINE;
     result += QString::number(id);

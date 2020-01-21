@@ -20,7 +20,7 @@ signals:
 private:
     QTcpSocket* proxyServer = nullptr; 
     QTcpServer* forwardServer = nullptr;  //监听端口供客户端连接进来
-    QTcpServer* listenOffer = nullptr;;
+    QTcpServer* listenOffer = nullptr;
     int socketID = 0;
     int serverPort = 0;
     int listenOfferPort = 0;
@@ -30,6 +30,7 @@ private slots:
     void commandGetnewOffer();
     void newOffer();
     void newConnect();
+    void bindForwardData(QTcpSocket* source,QTcpSocket* target);
 };
 
 #endif // FORWARD_H
